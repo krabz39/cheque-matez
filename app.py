@@ -4,7 +4,7 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
-app = Flask(__name__)
+app = Flask(app)
 app.secret_key = "your_secret_key_here"  # change this to a strong secret
 
 # ----- Calculator logic -----
