@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin Dashboard</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+body { padding: 2rem; max-width: 1100px; margin: auto; background-color: #f8f9fa; }
+.result-row { font-weight: 600; font-size: 1.05rem; }
+#amountMessage { color: #ff0000; font-weight: 600; margin-top: 0.25rem; }
+
+.navbar { background-color: #063d3f !important; }
+.navbar .navbar-brand { color: white !important; font-weight: bold; }
+.navbar .btn-outline-primary { color: #063d3f; border-color: #063d3f; border-radius: 1px; }
+.navbar .btn-outline-primary:hover { background-color: #063d3f; color: white; }
+.navbar .btn-outline-secondary { color: #063d40; border-color: #063d40; border-radius: 1px; }
+.navbar .btn-outline-secondary:hover { background-color: #063d40; color: white; }
+.navbar .btn-outline-danger { color: #ff0000; border-color: #ff0000; border-radius: 1px; }
+.navbar .btn-outline-danger:hover { background-color: #ff0000; color: white; }
+.navbar .btn-outline-warning { color: gold; border-color: gold; border-radius: 1px; }
+.navbar .btn-outline-warning:hover { background-color: gold; color: #063d3f; }
+
+.btn-primary { background-color: #063d3f; border-color: #063d3f; border-radius: 1px; }
+.btn-primary:hover { background-color: #053c3f; border-color: #053c3f; }
+
+table thead { background-color: #063d3f; color: white; }
+table tbody tr:hover { background-color: #e6f2f2; }
+
+.stats-card { background-color: #063d3f; color: white; border-radius: 1px; padding: 15px; text-align: center; border: 2px solid #ff0000; }
+.stats-card h4 { margin-bottom: 10px; font-weight: bold; }
+.stats-card p { font-size: 1.5rem; margin: 0; }
+
+#bankDiv { display: none; margin-top: 10px; }
+#paybillDisplay { margin-top: 5px; font-weight: bold; }
+.form-section { margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg mb-4">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{{ url_for('dashboard') }}">Admin Panel</a>
+    <div class="d-flex">
+      <a href="{{ url_for('all_transactions') }}" 
+         class="btn {% if request.endpoint == 'all_transactions' %}btn-outline-danger{% else %}btn-outline-primary{% endif %} me-2">All Transactions</a>
+      <a href="{{ url_for('customer') }}" 
+         class="btn {% if request.endpoint == 'customer' %}btn-outline-danger{% else %}btn-outline-secondary{% endif %} me-2">Customer Page</a>
+      <a href="{{ url_for('admin_exchange_rate') }}" class="btn btn-outline-warning me-2">Update Rate</a>
+      <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">Logout</a>
+    </div>
+  </div>
+</nav>
+
+<p class="mb-3">Welcome back, <strong>{{ username }}</strong>!</p>
+<h2 style="color:#063d3f;">Admin Dashboard - Transaction Entry</h2>
+
+<form id="transactionForm" method="POST" action="{{ url_for('add_transaction') }}">
+  <!-- Currency selection -->
+  <div class="form-section">
+    <label for="currency">Currency:</label>
+    <select id="currency" class="form-select w-auto">
+      <option value="KES" selected>KES</option>
+      <option value="KWD">KWD</option>
+    </select>
+  </div>
+
+  <!-- Service selection -->
+  <div class="form-section">
+    <label for="service">Service:</label>
+    <select id="service" class="form-select w-auto">
+      <option value="mpesa" selected>Mpesa</option>
+      <option value="bank">Bank</option>
+    </select>
+  </div>
+
+  <!-- Account input -->
+  <div class="form-section">
+    <label id="accountLabel" for="accountInput">Phone Number:</label>
+    <input type="text" id="accountInput" class="form-control w-auto" placeholder="254712345678">
+  </div>
+
+  <!-- Bank selection -->
+  <div id="bankDiv" class="form-section">
+    <label for="bank">Select Bank:</label>
+    <select id="bank" class="form-select w-auto">
+      <option value="">--Select Bank--</option>
+      <option>African Banking Corporation Ltd</option>
+      <option>ABC Bank</option>
+      <option>Absa Bank Kenya (Barclays)</option>
+      <option>Bank of Africa Kenya</option>
+      <option>Citibank Kenya</option>
+      <option>Consolidated Bank</option>
+      <option>Co-operative Bank of Kenya</option>
+      <option>Credit Bank</option>
+      <option>Diamond Trust Bank (DTB)</option>
+      <option>Ecobank Kenya</option>
+      <option>Equity Bank</option>
+      <option>Family Bank</option>
+      <option>First Community Bank</option>
+      <option>Guardian Bank</option>
+      <option>Habib Bank AG Zurich</option>
+      <option>HFC Bank</option>
+      <option>I&M Bank</option>
+      <option>KCB Bank</option>
+      <option>Middle East Bank</option>
+      <option>NCBA Bank</option>
+      <option>National Bank of Kenya</option>
+      <option>Prime Bank</option>
+      <option>SBG Bank Kenya</option>
+      <option>Standard Chartered Bank</option>
+      <option>Sidian Bank</option>
+      <option>Stanbic Bank</option>
+      <option>Uchumi Commercial Bank</option>
+      <option>Victoria Commercial Bank</option>
+    </select>
+    <div id="paybillDisplay"></div>
+    <input type="hidden" id="paybillInput">
+  </div>
+
+  <!-- Amount input -->
+  <div class="mb-3">
+    <label for="amountInput" class="form-label">Amount</label>
+    <input type="number" class="form-control" id="amountInput" placeholder="Enter amount" autocomplete="off" />
+    <div id="amountMessage"></div>
+    <div class="form-text">Min: 5 KWD | Max: 600 KWD</div>
+  </div>
+
+  <!-- Service charge checkbox -->
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="serviceChargeIncluded" checked />
+    <label class="form-check-label" for="serviceChargeIncluded">Service Charge Included</label>
+  </div>
+
+  <!-- Display values -->
+  <div class="form-section">
+    <p>Final Amount (KWD): <span id="displayAmountKWD">0.0000</span></p>
+    <p>Final Amount (KES): <span id="displayAmountKES">0.00</span></p>
+    <p>Total Fee (KWD): <span id="displayTotalFee">0.0000</span></p>
+  </div>
+
+  <button type="submit" class="btn btn-primary mt-3">Submit Transaction</button>
+</form>
+
+<hr />
+
+<h3 style="color:#063d3f;">Recent Transactions</h3>
+<div class="mb-2">
+  <button id="exportCSV" class="btn btn-success">Export CSV</button>
+</div>
+
+<table class="table table-striped" id="transactionsTable">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Amount (KWD)</th>
+      <th>Amount (KES)</th>
+      <th>Profit (KWD)</th>
+      <th>Customer</th>
+      <th>Date</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for log in logs %}
+    <tr>
+      <td>{{ log.id }}</td>
+      <td>{{ "%.4f"|format(log.amount_kwd) }}</td>
+      <td>{{ "%.2f"|format(log.amount_kes) }}</td>
+      <td>{{ "%.4f"|format(log.profit_kwd) }}</td>
+      <td>{{ log.customer_username or "N/A" }}</td>
+      <td>{{ log.date }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<hr />
+
+<div class="mb-5">
+  <canvas id="transactionsChart" height="120"></canvas>
+</div>
+
+<script>
+// Exchange & Fee Config
+const EXCHANGE_RATE = {{ exchange_rate }};
+const DISTRIBUTOR_FEE_KWD = 0.4;
+const MIN_KWD = 5, MAX_KWD = 600;
+const SAFARICOM_FEES = [[1,100,0],[101,500,11],[501,1000,27],[1001,3500,27],[3501,10000,44],[10001,25000,54],[25001,50000,70],[50001,100000,105],[100001,500000,110]];
+
+// Bank Paybills
+const bankPaybillsAdmin = {
+  "African Banking Corporation Ltd":"982800","ABC Bank":"982801","Absa Bank Kenya (Barclays)":"303030",
+  "Bank of Africa Kenya":"972900","Citibank Kenya":"700100","Consolidated Bank":"920200",
+  "Co-operative Bank of Kenya":"900900","Credit Bank":"970970","Diamond Trust Bank (DTB)":"222222",
+  "Ecobank Kenya":"961961","Equity Bank":"247247","Family Bank":"222111","First Community Bank":"955955",
+  "Guardian Bank":"955000","Habib Bank AG Zurich":"908908","HFC Bank":"996996","I&M Bank":"989898",
+  "KCB Bank":"522522","Middle East Bank":"999000","NCBA Bank":"522522","National Bank of Kenya":"990990",
+  "Prime Bank":"993993","SBG Bank Kenya":"666333","Standard Chartered Bank":"600100","Sidian Bank":"905905",
+  "Stanbic Bank":"606606","Uchumi Commercial Bank":"990100","Victoria Commercial Bank":"988988"
+};
+
+// DOM Elements
+const currencySelect = document.getElementById("currency");
+const serviceSelectAdmin = document.getElementById("service");
+const accountLabelAdmin = document.getElementById("accountLabel");
+const accountInputAdmin = document.getElementById("accountInput");
+const bankDivAdmin = document.getElementById("bankDiv");
+const bankSelectAdmin = document.getElementById("bank");
+const paybillDisplayAdmin = document.getElementById("paybillDisplay");
+const paybillInputAdmin = document.getElementById("paybillInput");
+const amountInput = document.getElementById("amountInput");
+
+// Safaricom Fee Logic
+function getSafaricomFee(amountKES){
+  for(const [low,high,fee] of SAFARICOM_FEES) if(amountKES>=low&&amountKES<=high) return fee;
+  return 0;
+}
+function calculateDynamicMargin(amountKWD, safFeeKWD, distributorFee){return safFeeKWD+(amountKWD*distributorFee);}
+function setDisplayedValues(aKWD,aKES,totalFee){
+  document.getElementById("displayAmountKWD").textContent=aKWD.toFixed(4);
+  document.getElementById("displayAmountKES").textContent=aKES.toFixed(2);
+  document.getElementById("displayTotalFee").textContent=totalFee.toFixed(4);
+}
+
+// Update values
+function updateAdminValues(){
+  let amount=parseFloat(amountInput.value);
+  if(!amount||amount===0){ setDisplayedValues(0,0,0); return; }
+  let amountKWD = currencySelect.value==="KWD"?amount:amount/EXCHANGE_RATE;
+  const amountKES = amountKWD*EXCHANGE_RATE;
+  const safFeeKES = getSafaricomFee(amountKES);
+  const safFeeKWD = safFeeKES/EXCHANGE_RATE;
+  const marginKWD = calculateDynamicMargin(amountKWD,safFeeKWD,DISTRIBUTOR_FEE_KWD);
+  const serviceChargeIncluded = document.getElementById("serviceChargeIncluded").checked;
+  let finalAmountKWD, finalAmountKES, totalFeeKWD;
+  if(serviceChargeIncluded){ totalFeeKWD=marginKWD; finalAmountKWD=amountKWD; finalAmountKES=(amountKWD-totalFeeKWD)*EXCHANGE_RATE; }
+  else{ totalFeeKWD=marginKWD; finalAmountKWD=amountKWD+totalFeeKWD; finalAmountKES=amountKWD*EXCHANGE_RATE; }
+  setDisplayedValues(finalAmountKWD,finalAmountKES,totalFeeKWD);
+}
+
+// Service change
+serviceSelectAdmin.addEventListener("change",()=>{
+  if(serviceSelectAdmin.value==="mpesa"){
+    accountLabelAdmin.textContent="Phone Number:";
+    accountInputAdmin.placeholder="254712345678"; accountInputAdmin.value="";
+    bankDivAdmin.style.display="none"; paybillDisplayAdmin.textContent=""; paybillInputAdmin.value="";
+  } else{
+    accountLabelAdmin.textContent="Account Number:";
+    accountInputAdmin.placeholder="Enter account number"; accountInputAdmin.value="";
+    bankDivAdmin.style.display="block";
+    const selectedBank = bankSelectAdmin.value;
+    if(bankPaybillsAdmin[selectedBank]){
+      paybillDisplayAdmin.textContent="Paybill: "+bankPaybillsAdmin[selectedBank];
+      paybillInputAdmin.value=bankPaybillsAdmin[selectedBank];
+    }
+  }
+});
+
+// Bank change
+bankSelectAdmin.addEventListener("change",()=>{
+  const selectedBank = bankSelectAdmin.value;
+  if(bankPaybillsAdmin[selectedBank]){
+    paybillDisplayAdmin.textContent="Paybill: "+bankPaybillsAdmin[selectedBank];
+    paybillInputAdmin.value=bankPaybillsAdmin[selectedBank];
+  } else{ paybillDisplayAdmin.textContent=""; paybillInputAdmin.value=""; }
+});
+
+amountInput.addEventListener("input",updateAdminValues);
+document.getElementById("serviceChargeIncluded").addEventListener("change",updateAdminValues);
+currencySelect.addEventListener("change",updateAdminValues);
+window.addEventListener("load",updateAdminValues);
+
+// CSV Export
+document.getElementById('exportCSV').addEventListener('click', async function(){
+  try{
+    const res=await fetch("/export_transactions_json");
+    if(!res.ok) throw new Error("Failed to fetch transactions");
+    const data=await res.json(); const transactions=data.transactions;
+    if(transactions.length===0){alert("No transactions available to export."); return;}
+    let csv=[]; csv.push(['ID','Amount (KWD)','Amount (KES)','Profit (KWD)','Customer','Date'].join(','));
+    transactions.forEach(t=>csv.push([t.id,t.amount_kwd,t.amount_kes,t.profit_kwd,t.customer_username,t.date].join(',')));
+    const blob=new Blob([csv.join('\n')],{type:'text/csv'}); const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download='all_transactions.csv'; a.click();
+  }catch(err){alert("Error exporting transactions: "+err.message); console.error(err);}
+});
+
+// Chart - 
+
+
+// === Transactions Chart with Interactive Hover Lines ===
+(async function renderChart() {
+  try {
+    const res = await fetch("/export_transactions_json");
+    if (!res.ok) throw new Error("Failed to fetch transactions for chart");
+    const data = await res.json();
+    const transactions = data.transactions;
+
+    if (!transactions.length) return;
+
+    // Aggregate daily totals and profits
+    const dailyTotalsKWD = {};
+    const dailyProfitsKWD = {};
+    transactions.forEach(t => {
+      const date = t.date.split(' ')[0]; // YYYY-MM-DD
+      if (!dailyTotalsKWD[date]) dailyTotalsKWD[date] = 0;
+      if (!dailyProfitsKWD[date]) dailyProfitsKWD[date] = 0;
+      dailyTotalsKWD[date] += parseFloat(t.amount_kwd);
+      dailyProfitsKWD[date] += parseFloat(t.profit_kwd);
+    });
+
+    const labels = Object.keys(dailyTotalsKWD).sort();
+    const totalsKWD = labels.map(d => dailyTotalsKWD[d]);
+    const totalsKES = totalsKWD.map(k => k * EXCHANGE_RATE);
+    const profitsKWD = labels.map(d => dailyProfitsKWD[d]);
+
+    const ctx = document.getElementById('transactionsChart').getContext('2d');
+    document.getElementById('transactionsChart').height = 450;
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Amount (KWD)',
+            data: totalsKWD,
+            borderColor: '#063d3f',
+            backgroundColor: 'rgba(6,61,63,0.1)',
+            tension: 0.3,
+            fill: true,
+            yAxisID: 'yAmounts',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            borderWidth: 2
+          },
+          {
+            label: 'Amount (KES)',
+            data: totalsKES,
+            borderColor: 'gold',
+            backgroundColor: 'rgba(255,215,0,0.1)',
+            tension: 0.3,
+            fill: true,
+            yAxisID: 'yAmounts',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            borderWidth: 2
+          },
+          {
+            label: 'Profit (KWD)',
+            data: profitsKWD,
+            borderColor: 'blue',
+            backgroundColor: 'rgba(0,0,255,0.05)',
+            tension: 0.3,
+            fill: true,
+            yAxisID: 'yProfit',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            borderWidth: 3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',    // show all points under the hovered x-axis
+          intersect: false  // do not require exact point
+        },
+        plugins: {
+          legend: { display: true },
+          tooltip: {
+            mode: 'index',
+            intersect: false,
+            callbacks: {
+              label: function(context) {
+                return context.dataset.label + ': ' + context.parsed.y.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:4});
+              }
+            }
+          },
+          datalabels: {
+            display: true,
+            align: 'top',
+            anchor: 'end',
+            color: function(context) {
+              if(context.dataset.label.includes('Profit')) return 'blue';
+              if(context.dataset.label.includes('KES')) return 'goldenrod';
+              return '#063d3f';
+            },
+            font: { weight: 'bold', size: 10 },
+            formatter: function(value) {
+              return value.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:4});
+            }
+          }
+        },
+        scales: {
+          yAmounts: {
+            type: 'linear',
+            position: 'left',
+            beginAtZero: true,
+            title: { display: true, text: 'Amount (KWD/KES)' }
+          },
+          yProfit: {
+            type: 'linear',
+            position: 'right',
+            beginAtZero: true,
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: 'Profit (KWD)' }
+          },
+          x: {
+            ticks: {
+              autoSkip: true,
+              maxTicksLimit: Math.min(10, labels.length),
+              maxRotation: 45,
+              minRotation: 0
+            },
+            title: { display: true, text: 'Transaction Day' }
+          }
+        }
+      },
+      plugins: [ChartDataLabels]
+    });
+
+  } catch(err) {
+    console.error("Error rendering chart: ", err);
+  }
+})();
+
+
+
+
+
+</script>
+</body>
+</html>

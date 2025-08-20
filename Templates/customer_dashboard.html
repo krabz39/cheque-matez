@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Customer Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    body { background-color: #063d3f; font-family: Arial, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #ff0000; padding: 2rem; max-width: 900px; margin: auto; }
+    .navbar { background-color: #053d3f !important; }
+    .navbar-brand { color: #ff0000 !important; font-weight: bold; }
+    .navbar-nav .nav-link, .btn { color: #f8f9fa !important; }
+    .btn-primary { background-color: #063d3f; border-color: #063d3f; }
+    .btn-primary:hover { background-color: #ff0000; border-color: #ff0000; }
+    .btn-warning { background-color: #f5a623; border-color: #f5a623; color: #000000; }
+    .btn-warning:hover { background-color: #d48806; border-color: #d48806; color: #ffffff; }
+    .btn-outline-danger { color: #ff0000; border-color: #ff0000; }
+    .btn-outline-danger:hover { background-color: #ff0000; color: #ffffff; }
+    .btn-outline-secondary { color: #053d40; border-color: #053d40; }
+    .btn-outline-secondary:hover { background-color: #053d40; color: #ffffff; }
+    h2, h3 { color: #ff0000; font-weight: 600; margin-bottom: 1rem; }
+    .result-row { font-weight: 600; font-size: 1.05rem; margin-bottom: 0.5rem; }
+    #amountMessage { color: #ff0000; font-weight: 600; margin-top: 0.25rem; }
+    .table thead { background-color: #053d3f; color: #ffcc00; }
+    .table-striped > tbody > tr:nth-of-type(odd) { background-color: rgba(6, 61, 63, 0.1); }
+    footer { margin-top: 2rem; padding: 1rem; text-align: center; background-color: #053c3f; color: #ffffff; border-radius: 6px; }
+    select, input, button { padding: 5px; width: 250px; margin-top: 5px; border: 2px solid #053c3f; border-radius: 4px; background-color: #063c40; color: #ff0000; transition: all 0.3s ease; }
+    select:focus, input:focus { outline:none; border-color:#ff9900; box-shadow:0 0 5px #ff9900; }
+    ::placeholder { color:#ffb84d; opacity:0.8; }
+    .error { color:#ff0000; font-size:0.9em; margin-top:5px; display:none; }
+    input.valid { border-color: #ff0000; box-shadow: 0 0 5px #ff0000; }
+    input.invalid { border-color: #ff6600; }
+    button { background-color:#ff0000; color:#063d3f; border:2px solid #053d40; cursor:pointer; font-weight:bold; transition:all 0.3s ease; }
+    button:hover:not(:disabled) { background-color:#ff9900; border-color:#ff9900; color:#063d3f; }
+    button:disabled { background-color:#053c3f; cursor:not-allowed; color:#063d40; }
+    .feedback { display:inline-block; margin-left:5px; color:#ff0000; font-weight:bold; opacity:0; transition: opacity 0.3s ease-in-out; }
+    .feedback.show { opacity:1; }
+    #paybillDisplay { margin-left:10px; font-weight:bold; color:#ff0000; opacity:0; transition:opacity 0.5s ease-in-out; }
+    #paybillDisplay.show { opacity:1; }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{{ url_for('customer') }}">Cheque Matez</a>
+      <div class="d-flex">
+        <a href="{{ url_for('customer') }}" class="btn btn-primary me-2">Dashboard</a>
+        <a href="{{ url_for('my_transactions') }}" class="btn btn-outline-secondary me-2">Transactions</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <p class="mb-3">Welcome back, <strong>{{ username }}</strong>!</p>
+
+  <!-- Transaction Actions -->
+  <div class="card mb-4">
+    <div class="card-header bg-dark text-white">Transaction Actions</div>
+    <div class="card-body">
+      <button type="submit" form="transactionForm" name="transaction_type" value="deposit" class="btn btn-primary me-2">Deposit</button>
+      <button type="submit" form="transactionForm" name="transaction_type" value="withdraw" class="btn btn-warning">Withdraw</button>
+      <button type="button" class="btn btn-outline-secondary ms-2" onclick="fetchExchangeRate()">Exchange Rate</button>
+    </div>
+  </div>
+
+  <!-- Transaction Form -->
+  <h2>Transaction Entry</h2>
+  <form id="transactionForm" method="POST" action="{{ url_for('customer') }}">
+    <label for="currency">Select Currency:</label>
+    <select id="currency" name="currency">
+        <option value="KWD">KWD</option>
+        <option value="KES">KES</option>
+    </select>
+
+    <label for="service">Select Service:</label>
+    <select id="service" name="service">
+        <option value="bank">Bank</option>
+        <option value="mpesa">Mpesa</option>
+    </select>
+
+    <div id="bankDiv">
+        <label for="bank">Select Bank:</label>
+        <select id="bank" name="bank">
+  <option value="">-- Select Bank --</option>
+  <option value="African Banking Corporation Ltd">African Banking Corporation Ltd</option>
+  <option value="Amica Savings and Credit">Amica Savings and Credit</option>
+  <option value="Barclays Bank (Absa)">Barclays Bank (now Absa Bank Kenya)</option>
+  <option value="Bank of Africa Kenya">Bank of Africa Kenya</option>
+  <option value="C2 - Safaricom Internal">C2 - Safaricom Internal</option>
+  <option value="Centenary Sacco Society Ltd">Centenary Sacco Society Ltd</option>
+  <option value="Chase Bank (SBM)">Chase Bank (now SBM Bank)</option>
+  <option value="Consolidated Bank of Kenya Ltd">Consolidated Bank of Kenya Ltd</option>
+  <option value="Credit Bank">Credit Bank</option>
+  <option value="Daima Sacco">Daima Sacco</option>
+  <option value="Diamond Trust Bank (DTB)">Diamond Trust Bank (DTB)</option>
+  <option value="Equatorial Commercial Bank (Spire)">Equatorial Commercial Bank (now Spire)</option>
+  <option value="Equity Bank">Equity Bank</option>
+  <option value="Family Bank">Family Bank</option>
+  <option value="GDC Sacco Society Ltd">GDC Sacco Society Ltd</option>
+  <option value="Gulf African Bank">Gulf African Bank</option>
+  <option value="Investment & Mortgages Bank Ltd">Investment & Mortgages Bank Ltd</option>
+  <option value="Jamii Bora Bank">Jamii Bora Bank</option>
+  <option value="Kenya Highlands Sacco Society Ltd">Kenya Highlands Sacco Society Ltd</option>
+  <option value="Mayfair Bank Ltd">Mayfair Bank Ltd</option>
+  <option value="Middle East Bank Kenya">Middle East Bank Kenya</option>
+  <option value="NCBA Bank Kenya PLC">NCBA Bank Kenya PLC</option>
+  <option value="National Bank of Kenya">National Bank of Kenya</option>
+  <option value="National Industrial Credit Bank (NIC)">National Industrial Credit Bank (NIC)</option>
+  <option value="First Community Bank Ltd">First Community Bank Ltd</option>
+  <option value="Prime Bank Ltd">Prime Bank Ltd</option>
+  <option value="Rafiki Microfinance Bank Ltd">Rafiki Microfinance Bank Ltd</option>
+  <option value="Skyline Sacco Society Ltd">Skyline Sacco Society Ltd</option>
+  <option value="Stanbic Bank Ltd">Stanbic Bank Ltd</option>
+  <option value="Sidian Bank (K-Rep)">Sidian Bank (formerly K-Rep Bank)</option>
+  <option value="Tai Sacco Society Ltd">Tai Sacco Society Ltd</option>
+  <option value="Times U Sacco Society Ltd">Times U Sacco Society Ltd</option>
+  <option value="Trans Nation Sacco Society Ltd">Trans Nation Sacco Society Ltd</option>
+  <option value="Transnational Bank Ltd (Access Bank)">Transnational Bank Ltd (now Access Bank)</option>
+  <option value="UBA Kenya Bank Ltd">UBA Kenya Bank Ltd</option>
+  <option value="Viktas Sacco Society Ltd">Viktas Sacco Society Ltd</option>
+  <option value="Vision Afrika Sacco Society Ltd">Vision Afrika Sacco Society Ltd</option>
+  <option value="Wananchi Sacco Society Ltd">Wananchi Sacco Society Ltd</option>
+  <option value="Winas Sacco">Winas Sacco</option>
+  <option value="MMH Sacco Society Ltd">MMH Sacco Society Ltd</option>
+  <option value="Muki Sacco">Muki Sacco</option>
+  <option value="Taifa Sacco">Taifa Sacco</option>
+</select>
+        <span id="bankCheck" class="feedback">&#10004;</span>
+        <div id="bankError" class="error">Please select a bank!</div>
+    </div>
+
+    <label for="accountInput" id="accountLabel">Account Number:</label>
+    <input type="text" id="accountInput" name="accountInput" placeholder="Enter account number">
+    <span id="accountCheck" class="feedback">&#10004;</span>
+    <span id="paybillDisplay"></span>
+    <div id="errorMsg" class="error">Invalid input!</div>
+    <input type="hidden" id="paybillInput" name="paybillInput">
+
+    <div class="mb-3 mt-3">
+      <label for="amountKWD" class="form-label" id="amountLabel">Amount in KWD</label>
+      <input type="number" class="form-control" id="amountKWD" name="amount_kwd" step="1" placeholder="Enter amount" autocomplete="off"/>
+
+      <div id="amountMessage"></div>
+      <div class="form-text" id="amountRangeText">Min: 5 KWD | Max: 600 KWD</div>
+    </div>
+
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" id="serviceChargeIncluded" name="service_charge_included" checked />
+      <label class="form-check-label" for="serviceChargeIncluded">Service Charge Included</label>
+    </div>
+
+    <div>
+      <div class="result-row">Amount in KWD (Final): <span id="displayAmountKWD">0.0000</span></div>
+      <div class="result-row">Amount in KES: <span id="displayAmountKES">0.00</span></div>
+      <div class="result-row">Total Transaction Fee: <span id="displayTotalFee">0.0000</span> KWD</div>
+    </div>
+
+    <br>
+    <button type="submit" id="submitBtn" disabled>Submit Transaction</button>
+  </form>
+
+  <hr />
+  <h3>Your Transactions</h3>
+  {% if transactions and transactions|length > 0 %}
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Amount (KWD)</th>
+          <th>Amount (KES)</th>
+          <th>Profit (KWD)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for txn in transactions %}
+        <tr>
+          <td>{{ txn['date'] }}</td>
+          <td>{{ txn['description'] }}</td>
+          <td>{% if txn['transaction_type'] == 'withdraw' %}<span class="text-danger">-{{ "%.4f"|format(txn['amount_kwd']|abs) }}</span>{% else %}{{ "%.4f"|format(txn['amount_kwd']) }}{% endif %}</td>
+          <td>{{ "%.2f"|format(txn['amount_kes']) }}</td>
+          <td>{{ "%.4f"|format(txn['profit_kwd']) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No transactions yet.</p>
+  {% endif %}
+
+  <footer>&copy; {{ year }} Cheque Matez. All rights reserved.</footer>
+
+<script>
+// Constants
+const EXCHANGE_RATE = {{ exchange_rate }};
+const DISTRIBUTOR_FEE_KWD = 0.4;
+const SAFARICOM_FEES = [[1,100,0],[101,500,11],[501,1000,27],[1001,3500,27],[3501,10000,44],[10001,25000,54],[25001,50000,70],[50001,100000,105],[100001,500000,110]];
+const MIN_KWD = 0.0, MAX_KWD = 600.0;
+
+const amountInput = document.getElementById("amountKWD");
+const currencySelect = document.getElementById("currency");
+const amountLabel = document.getElementById("amountLabel");
+const amountRangeText = document.getElementById("amountRangeText");
+
+// Bank Paybills mapping
+const bankPaybills = {
+  "African Banking Corporation Ltd": "982800",
+  "Amica Savings and Credit": "982800",
+  "Barclays Bank (Absa)": "303030",
+  "Bank of Africa Kenya": "972900",
+  "C2 - Safaricom Internal": "982800",
+  "Centenary Sacco Society Ltd": "982800",
+  "Chase Bank (SBM)": "552800",
+  "Consolidated Bank of Kenya Ltd": "982800",
+  "Credit Bank": "220220",
+  "Daima Sacco": "982800",
+  "Diamond Trust Bank (DTB)": "222222",
+  "Equatorial Commercial Bank (Spire)": "498100",
+  "Equity Bank": "247247",
+  "Family Bank": "400222",
+  "GDC Sacco Society Ltd": "982800",
+  "Gulf African Bank": "220220",
+  "Investment & Mortgages Bank Ltd": "982800",
+  "Jamii Bora Bank": "982800",
+  "Kenya Highlands Sacco Society Ltd": "982800",
+  "Mayfair Bank Ltd": "522522",
+  "Middle East Bank Kenya": "982800",
+  "NCBA Bank Kenya PLC": "522522",
+  "National Bank of Kenya": "200200",
+  "National Industrial Credit Bank (NIC)": "982800",
+  "First Community Bank Ltd": "982800",
+  "Prime Bank Ltd": "982800",
+  "Rafiki Microfinance Bank Ltd": "328585",
+  "Skyline Sacco Society Ltd": "982800",
+  "Stanbic Bank Ltd": "600100",
+  "Sidian Bank (K-Rep)": "111999",
+  "Tai Sacco Society Ltd": "982800",
+  "Times U Sacco Society Ltd": "982800",
+  "Trans Nation Sacco Society Ltd": "982800",
+  "Transnational Bank Ltd (Access Bank)": "982800",
+  "UBA Kenya Bank Ltd": "559900",
+  "Viktas Sacco Society Ltd": "982800",
+  "Vision Afrika Sacco Society Ltd": "982800",
+  "Wananchi Sacco Society Ltd": "982800",
+  "Winas Sacco": "982800",
+  "MMH Sacco Society Ltd": "982800",
+  "Muki Sacco": "982800",
+  "Taifa Sacco": "982800"
+};
+
+// DOM elements
+const bankSelect = document.getElementById("bank");
+const paybillDisplay = document.getElementById("paybillDisplay");
+const paybillInput = document.getElementById("paybillInput");
+
+// Show paybill on bank selection
+bankSelect.addEventListener("change", () => {
+    const selectedBank = bankSelect.value;
+    if(bankPaybills[selectedBank]){
+        const paybill = bankPaybills[selectedBank];
+        paybillDisplay.textContent = "Paybill: " + paybill;
+        paybillDisplay.classList.add("show");
+        paybillInput.value = paybill;
+    } else {
+        paybillDisplay.textContent = "";
+        paybillDisplay.classList.remove("show");
+        paybillInput.value = "";
+    }
+});
+
+const serviceSelect = document.getElementById("service");
+const accountLabel = document.getElementById("accountLabel");
+const accountInput = document.getElementById("accountInput");
+const bankDiv = document.getElementById("bankDiv");
+
+serviceSelect.addEventListener("change", () => {
+    if(serviceSelect.value === "mpesa") {
+        // Mpesa selected
+        accountLabel.textContent = "Phone Number:";
+        accountInput.placeholder = "254712345678";
+        accountInput.value = "";
+        bankDiv.style.display = "none"; // hide bank dropdown
+        paybillDisplay.textContent = ""; 
+        paybillDisplay.classList.remove("show");
+        paybillInput.value = "";
+    } else {
+        // Bank selected
+        accountLabel.textContent = "Account Number:";
+        accountInput.placeholder = "Enter account number";
+        accountInput.value = "";
+        bankDiv.style.display = "block"; // show bank dropdown
+        // reset paybill display if bank already selected
+        const selectedBank = bankSelect.value;
+        if(bankPaybills[selectedBank]){
+            paybillDisplay.textContent = "Paybill: " + bankPaybills[selectedBank];
+            paybillDisplay.classList.add("show");
+            paybillInput.value = bankPaybills[selectedBank];
+        }
+    }
+});
+
+function getSafaricomFee(amountKES){ for(const [low,high,fee] of SAFARICOM_FEES){ if(amountKES>=low && amountKES<=high) return fee;} return 0; }
+function calculateDynamicMargin(amountKWD,safFeeKWD,distributorFeeKWD){ let baseMargin=safFeeKWD+distributorFeeKWD+0.1; const MAX_MARGIN=1.1; let maxExtra=MAX_MARGIN-baseMargin; if(maxExtra<0) maxExtra=0; let extraAmount=amountKWD-50; let extraMargin=Math.min(maxExtra,0.01*extraAmount); return Math.min(baseMargin+extraMargin, MAX_MARGIN); }
+
+function updateValues(){
+    let amount = parseFloat(amountInput.value);
+    if(!amount || amount === 0){ amountInput.value = ""; setDisplayedValues(0,0,0); return; }
+
+    const currency = currencySelect.value;
+    let amountKWD;
+    if(currency === "KWD"){
+        if(amount<MIN_KWD){ amount=MIN_KWD; amountInput.value=amount.toFixed(1); }
+        else if(amount>MAX_KWD){ amount=MAX_KWD; amountInput.value=amount.toFixed(1); }
+        amountKWD = amount;
+    } else { // KES input
+        const minKES = MIN_KWD*EXCHANGE_RATE;
+        const maxKES = MAX_KWD*EXCHANGE_RATE;
+        if(amount<minKES){ amount=minKES; amountInput.value=amount.toFixed(1); }
+        else if(amount>maxKES){ amount=maxKES; amountInput.value=amount.toFixed(1); }
+        amountKWD = amount / EXCHANGE_RATE;
+    }
+
+    const amountKES = amountKWD*EXCHANGE_RATE;
+    const safFeeKES = getSafaricomFee(amountKES);
+    const safFeeKWD = safFeeKES / EXCHANGE_RATE;
+    const marginKWD = calculateDynamicMargin(amountKWD,safFeeKWD,DISTRIBUTOR_FEE_KWD);
+    const serviceChargeIncluded = document.getElementById("serviceChargeIncluded").checked;
+
+    let finalAmountKWD, finalAmountKES, totalFeeKWD;
+    if(serviceChargeIncluded){
+        totalFeeKWD = marginKWD;
+        finalAmountKWD = amountKWD;
+        finalAmountKES = (amountKWD - totalFeeKWD) * EXCHANGE_RATE;
+    } else {
+        totalFeeKWD = marginKWD;
+        finalAmountKWD = amountKWD + totalFeeKWD;
+        finalAmountKES = amountKWD * EXCHANGE_RATE;
+    }
+    setDisplayedValues(finalAmountKWD, finalAmountKES, totalFeeKWD);
+}
+
+function setDisplayedValues(amountKWD, amountKES, totalFeeKWD){
+    document.getElementById("displayAmountKWD").textContent = amountKWD.toFixed(1);
+    document.getElementById("displayAmountKES").textContent = amountKES.toFixed(1);
+    document.getElementById("displayTotalFee").textContent = totalFeeKWD.toFixed(1);
+}
+
+// Currency switch
+currencySelect.addEventListener("change", ()=>{
+    const currency = currencySelect.value;
+    if(currency === "KWD"){
+        amountLabel.textContent = "Amount in KWD";
+        amountInput.placeholder = "Enter amount in KWD";
+        amountRangeText.textContent = "Min: 5 KWD | Max: 600 KWD";
+    } else {
+        amountLabel.textContent = "Amount in KES";
+        amountInput.placeholder = "Enter amount in KES";
+        amountRangeText.textContent = "Min: " + (MIN_KWD*EXCHANGE_RATE).toFixed(2) + " KES | Max: " + (MAX_KWD*EXCHANGE_RATE).toFixed(2) + " KES";
+    }
+    updateValues();
+});
+
+amountInput.addEventListener("input", updateValues);
+document.getElementById("serviceChargeIncluded").addEventListener("change", updateValues);
+window.addEventListener("load", updateValues);
+
+// (Keep all your existing bank/mpesa validation JS unchanged here)
+
+</script>
+
+</body>
+</html>

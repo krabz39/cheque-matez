@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cheque Matez - Sign In</title>
+    <style>
+        body {
+            background-color: #000000;
+            font-family: Arial, sans-serif;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .login-container {
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 100px;
+            margin-bottom: 15px;
+        }
+
+        .illustration {
+            margin-bottom: 20px;
+        }
+
+        .illustration img {
+            width: 100%;
+            max-width: 250px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 30px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        input {
+            padding: 12px;
+            border-radius: 25px;
+            border: 1px solid white;
+            background-color: transparent;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input::placeholder {
+            color: #888;
+        }
+
+        .btn-signin {
+            background-color: #063d3f; /* Primary brand color */
+            color: white;
+            padding: 12px;
+            border-radius: 25px;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-signin:hover {
+            background-color: #085052;
+        }
+
+        .signup-text {
+            margin-top: 20px;
+            font-size: 0.9rem;
+        }
+
+        .signup-text a {
+            color: #063d3f; /* Primary brand color */
+            text-decoration: none;
+        }
+
+        .signup-text a:hover {
+            text-decoration: underline;
+        }
+
+        /* Flash messages styling */
+        .flash-message {
+            background-color: #b22222;
+            color: white;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Cheque Matez Logo" class="logo">
+
+
+        <!-- Illustration -->
+        <div class="illustration">
+            <img src="{{ url_for('static', filename='images/login-illustration.svg') }}" alt="Login Illustration">
+        </div>
+
+        <h1>Sign in</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash-message flash-{{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <!-- Changed name from 'username' to 'email' here -->
+            <input type="email" name="email" placeholder="Email" required autofocus />
+            <input type="password" name="password" placeholder="Password" required />
+            <button type="submit" class="btn-signin">Sign In</button>
+        </form>
+
+        <p class="signup-text">
+            Don’t have an account? <a href="/signup">Sign up</a>
+        </p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Two Factor Authentication</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+<div class="container mt-5" style="max-width: 400px;">
+    <h2 class="mb-4 text-center">Two Factor Authentication</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    <form method="POST" novalidate>
+        <div class="mb-3">
+            <label for="token" class="form-label">Enter Authentication Code</label>
+            <input
+                type="text"
+                class="form-control"
+                id="token"
+                name="token"
+                placeholder="e.g. 123456"
+                required
+                autofocus
+                maxlength="6"
+                pattern="\d{6}"
+                title="6-digit code"
+            />
+            <div class="form-text">Use your authenticator app or SMS code.</div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Verify</button>
+    </form>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

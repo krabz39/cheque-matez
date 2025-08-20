@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Add Transaction</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        .result-row { font-weight: 600; font-size: 1.05rem; margin-bottom: 0.25rem; }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <h2>Add Transaction</h2>
+    <form method="POST" id="transactionForm" action="{{ url_for('add_transaction') }}">
+        <div class="mb-3">
+            <label for="amount_kwd" class="form-label">Amount (KWD)</label>
+            <input type="number" step="0.0001" min="1" max="600" class="form-control" id="amount_kwd" name="amount_kwd" placeholder="Enter amount in KWD" required />
+            <div class="form-text">Min: 1 KWD | Max: 600 KWD</div>
+            <div id="amountMessage" style="color:red; font-weight:600; margin-top:0.25rem;"></div>
+        </div>
+
+        <div class="form-check mb-3">
+            <input class="form-check-input" type="checkbox" id="service_charge_included" name="service_charge_included" checked />
+            <label class="form-check-label" for="service_charge_included">
+                Service charge included in amount
+            </label>
+        </div>
+
+        <hr />
+
+        <div>
+            <div class="result-row">Amount in KWD (Final): <span id="displayAmountKWD">0.0000</span></div>
+            <div class="result-row">Amount in KES: <span id="displayAmountKES">0.00</span></div>
+            <div class="result-row">Safaricom Fee: <span id="displaySafaricomFeeKES">0</span> KES (<span id="displaySafaricomFeeKWD">0.0000</span> KWD)</div>
+            <div class="result-row">Distributor Fee: <span id="displayDistributorFee">0.4000</span> KWD</div>
+            <div class="result-row">Your Margin (incl. costs): <span id="displayMargin">0.0000</span> KWD</div>
+            <div class="result-row">Total Transaction Fee: <span id="displayTotalFee">0.0000</span> KWD</div>
+        </div>
+
+        <button type="submit" class="btn btn-primary mt-3">Add Transaction</button>
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary ms-2">Cancel</a>
+    </form>
+</div>
+
+<script>
+    const EXCHANGE_RATE = 422;
+    const DISTRIBUTOR_FEE_KWD = 0.4;
+    const BASE_PROFIT_KWD = 0.1;
+    const MAX_MARGIN_KWD = 1.1;
+    const SAFARICOM_FEES = [
+        [1, 100, 0],
+        [101, 500, 11],
+        [501, 1000, 27],
+        [1001, 3500, 27],
+        [3501, 10000, 44],
+        [10001, 25000, 54],
+        [25001, 50000, 70],
+        [50001, 100000, 105],
+        [100001, 500000, 110]
+    ];
+
+    function getSafaricomFee(amountKES) {
+        for (const [low, high, fee] of SAFARICOM_FEES) {
+            if (amountKES >= low && amountKES <= high) return fee;
+        }
+        return 0;
+    }
+
+    function calculateBaseMargin(safFeeKWD) {
+        return safFeeKWD + DISTRIBUTOR_FEE_KWD + BASE_PROFIT_KWD;
+    }
+
+    function calculateDynamicMargin(amountKWD, safFeeKWD) {
+        let baseMargin = calculateBaseMargin(safFeeKWD);
+        if (amountKWD <= 50) return baseMargin;
+
+        let maxExtra = MAX_MARGIN_KWD - baseMargin;
+        if (maxExtra < 0) maxExtra = 0;
+        let extraAmount = amountKWD - 50;
+        let extraMargin = Math.min(maxExtra, 0.01 * extraAmount);
+        return Math.min(baseMargin + extraMargin, MAX_MARGIN_KWD);
+    }
+
+    function updateValues() {
+        const amountInput = document.getElementById("amount_kwd");
+        const serviceIncluded = document.getElementById("service_charge_included").checked;
+        let amountKWD = parseFloat(amountInput.value);
+        const amountMessage = document.getElementById("amountMessage");
+
+        amountMessage.textContent = "";
+
+        if (!amountKWD || amountKWD <= 0) {
+            setDisplayedValues(0,0,0,0,DISTRIBUTOR_FEE_KWD,0,0);
+            return;
+        }
+
+        if (amountKWD < 1) { amountKWD = 1; amountMessage.textContent = "Minimum 1 KWD"; }
+        if (amountKWD > 600) { amountKWD = 600; amountMessage.textContent = "Maximum 600 KWD"; }
+
+        const amountKES = amountKWD * EXCHANGE_RATE;
+        const safFeeKES = getSafaricomFee(amountKES);
+        const safFeeKWD = safFeeKES / EXCHANGE_RATE;
+        const marginKWD = calculateDynamicMargin(amountKWD, safFeeKWD);
+        const totalFeeKWD = marginKWD;
+
+        let finalAmountKWD, finalAmountKES;
+
+        if (serviceIncluded) {
+            finalAmountKWD = amountKWD;
+            finalAmountKES = (amountKWD - totalFeeKWD) * EXCHANGE_RATE;
+        } else {
+            finalAmountKWD = amountKWD + totalFeeKWD;
+            finalAmountKES = amountKWD * EXCHANGE_RATE;
+        }
+
+        setDisplayedValues(finalAmountKWD, finalAmountKES, safFeeKES, safFeeKWD, DISTRIBUTOR_FEE_KWD, marginKWD, totalFeeKWD);
+    }
+
+    function setDisplayedValues(amountKWD, amountKES, safKES, safKWD, distKWD, marginKWD, totalFeeKWD) {
+        document.getElementById("displayAmountKWD").textContent = amountKWD.toFixed(4);
+        document.getElementById("displayAmountKES").textContent = amountKES.toFixed(2);
+        document.getElementById("displaySafaricomFeeKES").textContent = safKES;
+        document.getElementById("displaySafaricomFeeKWD").textContent = safKWD.toFixed(4);
+        document.getElementById("displayDistributorFee").textContent = distKWD.toFixed(4);
+        document.getElementById("displayMargin").textContent = marginKWD.toFixed(4);
+        document.getElementById("displayTotalFee").textContent = totalFeeKWD.toFixed(4);
+    }
+
+    document.getElementById("amount_kwd").addEventListener("input", updateValues);
+    document.getElementById("service_charge_included").addEventListener("change", updateValues);
+    window.addEventListener("load", updateValues);
+</script>
+</body>
+</html>

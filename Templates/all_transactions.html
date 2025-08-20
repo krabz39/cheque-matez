@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>All Transactions - Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+</head>
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light mb-4">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{{ url_for('dashboard') }}">Admin Dashboard</a>
+      <div class="d-flex">
+        <a href="{{ url_for('all_transactions') }}" class="btn btn-outline-primary me-2">All Transactions</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container">
+    <h2 class="mb-4">All Transactions</h2>
+
+    {% if transactions %}
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped align-middle">
+        <thead class="table-light">
+          <tr>
+            <th>ID</th>
+            <th>Customer Username</th>
+            <th>Amount (KWD)</th>
+            <th>Amount (KES)</th>
+            <th>Service Charge (KWD)</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for tx in transactions %}
+          <tr>
+            <td>{{ tx.id }}</td>
+            <td>{{ tx.customer_username if tx.customer_username else 'N/A' }}</td>
+            <td>{{ "%.4f"|format(tx.amount_kwd) }}</td>
+            <td>{{ "%.2f"|format(tx.amount_kes) }}</td>
+            <td>{{ "%.4f"|format(tx.profit_kwd) }}</td>
+            <td>{{ tx.date }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info text-center">
+      No transactions found.
+    </div>
+    {% endif %}
+  </div>
+</body>
+</html>
