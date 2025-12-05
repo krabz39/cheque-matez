@@ -1,6 +1,6 @@
 import sqlite3
 from flask import (
-    Flask, render_template, request, redirect, url_for, session, flash, g
+    Flask, render_Template, request, redirect, url_for, session, flash, g
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 
